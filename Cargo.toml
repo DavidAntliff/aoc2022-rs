@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "lib/*",
+    "bin/*",
+]
+
+[workspace.dependencies]
+clap = { version = "4.2.4", features = ["derive"]}
