@@ -6,3 +6,5 @@ members = [
 
 [workspace.dependencies]
 clap = { version = "4.2.4", features = ["derive"]}
+color-eyre = "0.6.2"
+rstest = "0.17.0"

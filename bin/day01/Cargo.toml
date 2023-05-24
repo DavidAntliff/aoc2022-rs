@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 common = { path = "../../lib/common" }
+color-eyre = { workspace = true }
+rstest = { workspace = true }

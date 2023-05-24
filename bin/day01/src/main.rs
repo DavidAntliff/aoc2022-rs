@@ -3,6 +3,8 @@ use std::error::Error;
 use common::load_input;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    color_eyre::install()?;
+
     let args: Vec<String> = env::args().collect();
 
     let input_filename = match args[1].as_str() {
@@ -54,4 +56,42 @@ fn part2(input: Vec<String>) -> String {
     values.sort();
     values.reverse();
     (values[0] + values[1] + values[2]).to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::*;
+
+    #[fixture]
+    fn input() -> Vec<String> {
+        "1000
+2000
+3000
+
+4000
+
+5000
+6000
+
+7000
+8000
+9000
+
+10000
+"
+            .split('\n')
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    #[rstest]
+    fn test_part1(input: Vec<String>) {
+        assert_eq!(part1(input), "24000");
+    }
+
+    #[rstest]
+    fn test_part2(input: Vec<String>) {
+        assert_eq!(part2(input), "45000");
+    }
 }
