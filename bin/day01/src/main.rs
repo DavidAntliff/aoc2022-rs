@@ -40,5 +40,18 @@ fn part1(input: Vec<String>) -> String {
 }
 
 fn part2(input: Vec<String>) -> String {
-    "Part 2 incomplete".to_owned()
+    let mut sum = 0;
+    let mut values = vec![];
+    for line in input {
+        if line.is_empty() {
+            values.push(sum);
+            sum = 0;
+        } else {
+            sum += line.parse::<i32>().unwrap();
+        }
+    }
+
+    values.sort();
+    values.reverse();
+    (values[0] + values[1] + values[2]).to_string()
 }
