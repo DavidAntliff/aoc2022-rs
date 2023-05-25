@@ -1,27 +1,6 @@
-use std::env;
-use std::error::Error;
-use common::load_input;
-
-fn main() -> Result<(), Box<dyn Error>> {
-    color_eyre::install()?;
-
-    let args: Vec<String> = env::args().collect();
-
-    let input_filename = match args[1].as_str() {
-        "1" => "inputs/day01.1",
-        "2" => "inputs/day01.2",
-        _ => panic!("Invalid part {}", args[1]),
-    };
-    let input = load_input(input_filename)?;
-
-    let solution = match args[1].as_str() {
-        "1" => part1(input),
-        "2" => part2(input),
-        _ => panic!("Invalid part"),
-    };
-
-    println!("{}", solution);
-    Ok(())
+fn main() -> color_eyre::Result<()> {
+    common::select_and_solve("inputs/day01.1", part1,
+                             "inputs/day01.2", part2)
 }
 
 fn part1(input: Vec<String>) -> String {
