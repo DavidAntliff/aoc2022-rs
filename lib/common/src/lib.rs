@@ -2,6 +2,17 @@ use color_eyre::eyre::{eyre, Context};
 use std::env;
 use std::io::Read;
 
+// https://stackoverflow.com/a/45145246
+#[macro_export]
+macro_rules! vec_of_strings {
+    // match a list of expressions separated by comma:
+    ($($str:expr),*) => ({
+        // create a Vec with this list of expressions,
+        // calling String::from on each:
+        vec![$(String::from($str),)*] as Vec<String>
+    });
+}
+
 pub fn load_input(filename: &str) -> color_eyre::Result<Vec<String>> {
     let mut file = std::fs::File::open(filename).wrap_err(format!("opening {}", filename))?;
     let mut content = String::new();
