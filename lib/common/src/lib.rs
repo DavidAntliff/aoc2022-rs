@@ -44,10 +44,14 @@ where
 
     let args: Vec<String> = env::args().collect();
 
+    if args.len() < 2 {
+        return Err(eyre!("Specify part number 1 or 2"));
+    }
+
     let solution = match args[1].as_str() {
         "1" => solve(input1, part1),
         "2" => solve(input2, part2),
-        _ => Err(eyre!("Invalid part {}", args[1])),
+        _ => Err(eyre!("Invalid part number {}", args[1])),
     }?;
 
     println!("{}", solution);
