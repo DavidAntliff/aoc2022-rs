@@ -4,7 +4,7 @@ fn main() -> color_eyre::Result<()> {
     common::select_and_solve("inputs/day02.1", part1, "inputs/day02.2", part2)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 enum Move {
     Rock,
     Paper,
@@ -91,8 +91,69 @@ fn part1(input: Vec<String>) -> String {
     score.to_string()
 }
 
-fn part2(_input: Vec<String>) -> String {
-    "2".to_owned()
+fn lose(m: &Move) -> Move {
+    match m {
+        Move::Rock => Move::Scissors,
+        Move::Paper => Move::Rock,
+        Move::Scissors => Move::Paper,
+    }
+}
+
+fn win(m: &Move) -> Move {
+    match m {
+        Move::Rock => Move::Paper,
+        Move::Paper => Move::Scissors,
+        Move::Scissors => Move::Rock,
+    }
+}
+
+fn parse_line2(line: &str) -> (Move, Move) {
+    let v: Vec<&str> = line.split(' ').collect();
+    let (theirs, ours) = (v[0], v[1]);
+
+    let move1 = match theirs {
+        "A" => Move::Rock,
+        "B" => Move::Paper,
+        "C" => Move::Scissors,
+        _ => panic!("invalid"),
+    };
+
+    let move2 = match ours {
+        "X" => lose(&move1),
+        "Y" => move1,
+        "Z" => win(&move1),
+        _ => panic!("invalid"),
+    };
+
+    (move1, move2)
+}
+
+fn parse_moves2(input: Vec<String>) -> Vec<(Move, Move)> {
+    let moves = input
+        .iter()
+        .map(|s| parse_line2(s))
+        .collect::<Vec<(Move, Move)>>();
+
+    moves
+}
+
+fn part2(input: Vec<String>) -> String {
+    let mut score = 0;
+    let rounds: Vec<(Move, Move)> = parse_moves2(input);
+
+    for (move1, move2) in rounds {
+        if let Some(c) = move2.partial_cmp(&move1) {
+            let outcome_score = c.score();
+            let shape_score = move2.score();
+            println!(
+                "{score}: {:?} {:?} -> {} {}",
+                move1, move2, outcome_score, shape_score
+            );
+            score += outcome_score + shape_score;
+        }
+    }
+
+    score.to_string()
 }
 
 #[cfg(test)]
@@ -127,5 +188,10 @@ mod tests {
     #[rstest]
     fn test_part1(input: Vec<String>) {
         assert_eq!(part1(input), "15")
+    }
+
+    #[rstest]
+    fn test_part2(input: Vec<String>) {
+        assert_eq!(part2(input), "12")
     }
 }
