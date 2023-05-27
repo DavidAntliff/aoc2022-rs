@@ -9,3 +9,4 @@ edition = "2021"
 common = { path = "../../lib/common" }
 color-eyre = { workspace = true }
 rstest = { workspace = true }
+itertools = "0.10.5"

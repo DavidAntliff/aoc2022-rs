@@ -19,6 +19,10 @@ pub fn load_input(filename: &str) -> color_eyre::Result<Vec<String>> {
     file.read_to_string(&mut content)
         .wrap_err(format!("reading {}", filename))?;
     Ok(content.lines().map(String::from).collect())
+
+    // Alternatively, this function could just return the
+    // BufRead 'content', permitting client code to call
+    // lines() or whatever is required.
 }
 
 pub fn solve(
