@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 
 fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
     common::select_and_solve("inputs/day02.1", part1, "inputs/day02.2", part2)
 }
 

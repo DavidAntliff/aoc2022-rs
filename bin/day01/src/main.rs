@@ -1,4 +1,5 @@
 fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
     //common::select_and_solve("inputs/day01.1", part1, "inputs/day01.2", part2)
     common::select_and_solve("inputs/day01.1", part1_alt, "inputs/day01.2", part2_alt)
 }

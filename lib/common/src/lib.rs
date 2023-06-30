@@ -34,6 +34,9 @@ pub fn solve(
     Ok(solution)
 }
 
+// TODO: Perhaps F1 and F2 should return Result?
+//       That way they can return errors if encountered.
+
 pub fn select_and_solve<F1, F2>(
     input1: &str,
     part1: F1,
@@ -44,8 +47,6 @@ where
     F1: Fn(Vec<String>) -> String,
     F2: Fn(Vec<String>) -> String,
 {
-    color_eyre::install()?;
-
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
