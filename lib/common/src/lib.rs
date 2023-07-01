@@ -1,4 +1,4 @@
-use color_eyre::eyre::{eyre, Context};
+use color_eyre::eyre::{eyre, Context, Result};
 use std::env;
 use std::io::Read;
 
@@ -13,7 +13,7 @@ macro_rules! vec_of_strings {
     });
 }
 
-pub fn load_input(filename: &str) -> color_eyre::Result<Vec<String>> {
+pub fn load_input(filename: &str) -> Result<Vec<String>> {
     let mut file = std::fs::File::open(filename).wrap_err(format!("opening {}", filename))?;
     let mut content = String::new();
     file.read_to_string(&mut content)
@@ -25,27 +25,16 @@ pub fn load_input(filename: &str) -> color_eyre::Result<Vec<String>> {
     // lines() or whatever is required.
 }
 
-pub fn solve(
-    input_filename: &str,
-    func: impl Fn(Vec<String>) -> String,
-) -> color_eyre::Result<String> {
+pub fn solve(input_filename: &str, func: impl Fn(Vec<String>) -> Result<String>) -> Result<String> {
     let input_data = load_input(input_filename)?;
     let solution = func(input_data);
-    Ok(solution)
+    solution
 }
 
-// TODO: Perhaps F1 and F2 should return Result?
-//       That way they can return errors if encountered.
-
-pub fn select_and_solve<F1, F2>(
-    input1: &str,
-    part1: F1,
-    input2: &str,
-    part2: F2,
-) -> color_eyre::Result<()>
+pub fn select_and_solve<F1, F2>(input1: &str, part1: F1, input2: &str, part2: F2) -> Result<String>
 where
-    F1: Fn(Vec<String>) -> String,
-    F2: Fn(Vec<String>) -> String,
+    F1: Fn(Vec<String>) -> Result<String>,
+    F2: Fn(Vec<String>) -> Result<String>,
 {
     let args: Vec<String> = env::args().collect();
 
@@ -53,14 +42,20 @@ where
         return Err(eyre!("Specify part number 1 or 2"));
     }
 
+    //let solution = match args.get(1).map(|s| s.as_str()) {
     let solution = match args[1].as_str() {
         "1" => solve(input1, part1),
         "2" => solve(input2, part2),
         _ => Err(eyre!("Invalid part number {}", args[1])),
-    }?;
+    };
 
-    println!("{}", solution);
-    Ok(())
+    match solution {
+        Ok(result) => {
+            println!("{}", result);
+            Ok(result)
+        }
+        Err(err) => Err(err),
+    }
 }
 
 #[cfg(test)]

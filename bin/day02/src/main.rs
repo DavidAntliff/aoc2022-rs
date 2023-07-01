@@ -1,8 +1,10 @@
+use color_eyre::Result;
 use std::cmp::Ordering;
 
-fn main() -> color_eyre::Result<()> {
+fn main() -> Result<()> {
     color_eyre::install()?;
-    common::select_and_solve("inputs/day02.1", part1, "inputs/day02.2", part2)
+    common::select_and_solve("inputs/day02.1", part1, "inputs/day02.2", part2)?;
+    Ok(())
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -73,7 +75,7 @@ fn parse_moves(input: Vec<String>) -> Vec<(Move, Move)> {
     moves
 }
 
-fn part1(input: Vec<String>) -> String {
+fn part1(input: Vec<String>) -> Result<String> {
     let mut score = 0;
     let rounds: Vec<(Move, Move)> = parse_moves(input);
 
@@ -89,7 +91,7 @@ fn part1(input: Vec<String>) -> String {
         }
     }
 
-    score.to_string()
+    Ok(score.to_string())
 }
 
 fn lose(m: &Move) -> Move {
@@ -138,7 +140,7 @@ fn parse_moves2(input: Vec<String>) -> Vec<(Move, Move)> {
     moves
 }
 
-fn part2(input: Vec<String>) -> String {
+fn part2(input: Vec<String>) -> Result<String> {
     let mut score = 0;
     let rounds: Vec<(Move, Move)> = parse_moves2(input);
 
@@ -154,7 +156,7 @@ fn part2(input: Vec<String>) -> String {
         }
     }
 
-    score.to_string()
+    Ok(score.to_string())
 }
 
 #[cfg(test)]

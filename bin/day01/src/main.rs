@@ -1,10 +1,13 @@
-fn main() -> color_eyre::Result<()> {
+use color_eyre::eyre::{eyre, Result};
+use common::select_and_solve;
+
+fn main() -> Result<()> {
     color_eyre::install()?;
-    //common::select_and_solve("inputs/day01.1", part1, "inputs/day01.2", part2)
-    common::select_and_solve("inputs/day01.1", part1_alt, "inputs/day01.2", part2_alt)
+    select_and_solve("inputs/day01.1", part1_alt, "inputs/day01.2", part2_alt)?;
+    Ok(())
 }
 
-fn part1(input: Vec<String>) -> String {
+fn part1(input: Vec<String>) -> Result<String> {
     let mut sum = 0;
     let mut max = 0;
     for line in input {
@@ -14,15 +17,15 @@ fn part1(input: Vec<String>) -> String {
             }
             sum = 0;
         } else {
-            sum += line.parse::<i32>().unwrap();
+            sum += line.parse::<i32>()?;
         }
     }
 
-    max.to_string()
+    Ok(max.to_string())
 }
 
 // https://fasterthanli.me/series/advent-of-code-2022/part-1
-fn part1_alt(input: Vec<String>) -> String {
+fn part1_alt(input: Vec<String>) -> Result<String> {
     let lines = input
         .iter()
         .map(|v| v.parse::<u64>().ok())
@@ -30,12 +33,13 @@ fn part1_alt(input: Vec<String>) -> String {
     let elven_lead = lines
         .split(|line| line.is_none())
         .map(|group| group.iter().map(|v| v.unwrap()).sum::<u64>())
-        .max();
+        .max()
+        .ok_or(eyre!("bad"))?;
 
-    elven_lead.unwrap().to_string()
+    Ok(elven_lead.to_string())
 }
 
-fn part2(input: Vec<String>) -> String {
+fn part2(input: Vec<String>) -> Result<String> {
     let mut sum = 0;
     let mut values = vec![];
     for line in input {
@@ -43,17 +47,17 @@ fn part2(input: Vec<String>) -> String {
             values.push(sum);
             sum = 0;
         } else {
-            sum += line.parse::<i32>().unwrap();
+            sum += line.parse::<i32>()?;
         }
     }
 
     values.sort();
     values.reverse();
-    (values[0] + values[1] + values[2]).to_string()
+    Ok((values[0] + values[1] + values[2]).to_string())
 }
 
 // https://fasterthanli.me/series/advent-of-code-2022/part-1
-fn part2_alt(input: Vec<String>) -> String {
+fn part2_alt(input: Vec<String>) -> Result<String> {
     use itertools::Itertools;
     use std::cmp::Reverse;
 
@@ -65,7 +69,7 @@ fn part2_alt(input: Vec<String>) -> String {
         .k_smallest(3)
         .map(|x| x.0)
         .sum::<u64>();
-    answer.to_string()
+    Ok(answer.to_string())
 }
 
 #[cfg(test)]
