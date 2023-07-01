@@ -101,11 +101,11 @@ mod tests {
 
     #[rstest]
     fn test_part1(input: Vec<String>) {
-        assert_eq!(part1(input), "24000");
+        assert_eq!(part1(input).unwrap(), "24000");
     }
 
     #[rstest]
     fn test_part2(input: Vec<String>) {
-        assert_eq!(part2(input), "45000");
+        assert_eq!(part2(input).unwrap(), "45000");
     }
 }
