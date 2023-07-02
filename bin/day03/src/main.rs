@@ -41,7 +41,7 @@ impl Priority for HashSet<char> {
     }
 }
 
-// TODO: Why can't I get this to work?
+// TODO: Why can't I get this to work on an Intersection?
 // impl<U> Priority for std::collections::hash_set::Intersection<'_, char, U>
 // where
 //     U: std::hash::BuildHasher,
@@ -118,16 +118,26 @@ fn part2(input: Vec<String>) -> Result<String> {
 
         assert_eq!(unions.len(), 3);
 
-        let i: HashSet<char> = unions[0].intersection(&unions[1]).cloned().collect();
-        let i: HashSet<char> = i.intersection(&unions[2]).cloned().collect();
+        // Verbose intersection of 3:
+        //let i: HashSet<char> = unions[0].intersection(&unions[1]).cloned().collect();
+        //let i: HashSet<char> = i.intersection(&unions[2]).cloned().collect();
+
+        // Concise intersection of 3:
+        //let i = &(&unions[0] & &unions[1]) & &unions[2];
+
+        // Use fold over N items:
+        // https://www.reddit.com/r/rust/comments/5v35l6/comment/ddz06ho/
+        let mut iter = unions.iter();
+        let i = iter
+            .next()
+            .map(|set| {
+                iter.fold(set.clone(), |set1, set2| {
+                    set1.intersection(&set2).cloned().collect()
+                })
+            })
+            .ok_or(eyre!("bad"))?;
 
         sum += i.priority();
-
-        // TODO: https://www.reddit.com/r/rust/comments/5v35l6/comment/ddz06ho/
-        // let iter = unions.iter();
-        // let intersection = iter
-        //     .next()
-        //     .map(|set| iter.fold(set, |&set1, &set2| set1 & set2));
     }
 
     Ok(sum.to_string())

@@ -30,5 +30,12 @@ mod tests {
     }
 
     #[rstest]
-    fn test_part1(input: Vec<String>) {}
+    fn test_part1(input: Vec<String>) {
+        assert_eq!(part1(input).unwrap(), "1");
+    }
+
+    #[rstest]
+    fn test_part2(input: Vec<String>) {
+        assert_eq!(part2(input).unwrap(), "2");
+    }
 }
