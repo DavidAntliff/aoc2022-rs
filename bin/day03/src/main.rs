@@ -1,4 +1,4 @@
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{eyre, Result};
 use common::select_and_solve;
 use std::collections::HashSet;
 
@@ -9,6 +9,7 @@ fn main() -> Result<()> {
 }
 
 // A rucksack is represented as two hashsets of items
+#[derive(Debug, PartialEq)]
 struct Rucksack(HashSet<char>, HashSet<char>);
 
 impl TryFrom<&str> for Rucksack {
@@ -21,7 +22,7 @@ impl TryFrom<&str> for Rucksack {
                 let (a, b) = value.split_at(len / 2);
                 Ok(Rucksack(a.chars().collect(), b.chars().collect()))
             }
-            _ => Err(color_eyre::eyre::eyre!("not even")),
+            _ => Err(eyre!("not even")),
         }
     }
 }
@@ -30,7 +31,7 @@ trait Priority {
     fn priority(&self) -> i32;
 }
 
-impl Priority for HashSet<&char> {
+impl Priority for HashSet<char> {
     fn priority(&self) -> i32 {
         let mut sum = 0;
         for c in self {
@@ -66,18 +67,22 @@ impl Priority for char {
     }
 }
 
-fn part1(input: Vec<String>) -> Result<String> {
-    let rucksacks = input
+fn get_rucksacks(input: Vec<String>) -> Result<Vec<Rucksack>> {
+    input
         .iter()
         .map(|s| s.as_str())
         .map(Rucksack::try_from)
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()
+}
+
+fn part1(input: Vec<String>) -> Result<String> {
+    let rucksacks = get_rucksacks(input)?;
 
     // for each item in ruckscks, get intersection and calculate priority
     let mut priority_sum = 0;
     for rucksack in rucksacks {
         //let in_both: HashSet<_> = rucksack.0.intersection(&rucksack.1);
-        let in_both: HashSet<_> = rucksack.0.intersection(&rucksack.1).collect();
+        let in_both: HashSet<_> = rucksack.0.intersection(&rucksack.1).cloned().collect();
         println!("{:?}", in_both);
 
         priority_sum += in_both.priority();
@@ -86,8 +91,46 @@ fn part1(input: Vec<String>) -> Result<String> {
     Ok(priority_sum.to_string())
 }
 
-fn part2(_input: Vec<String>) -> Result<String> {
-    Ok("2".to_owned())
+fn get_groups(rucksacks: &Vec<Rucksack>) -> Result<Vec<&[Rucksack]>> {
+    // split Vec into groups of three
+    if rucksacks.len() % 3 != 0 {
+        return Err(eyre!(
+            "Vector length is not a multiple of 3 ({})",
+            rucksacks.len()
+        ));
+    }
+    Ok(rucksacks.chunks_exact(3).collect())
+}
+
+fn part2(input: Vec<String>) -> Result<String> {
+    let rucksacks = get_rucksacks(input)?;
+
+    let groups = get_groups(&rucksacks)?;
+
+    let mut sum = 0;
+    for group in groups {
+        assert_eq!(group.len(), 3);
+
+        let unions: Vec<HashSet<char>> = group
+            .iter()
+            .map(|r| r.0.union(&r.1).cloned().collect::<HashSet<char>>())
+            .collect();
+
+        assert_eq!(unions.len(), 3);
+
+        let i: HashSet<char> = unions[0].intersection(&unions[1]).cloned().collect();
+        let i: HashSet<char> = i.intersection(&unions[2]).cloned().collect();
+
+        sum += i.priority();
+
+        // TODO: https://www.reddit.com/r/rust/comments/5v35l6/comment/ddz06ho/
+        // let iter = unions.iter();
+        // let intersection = iter
+        //     .next()
+        //     .map(|set| iter.fold(set, |&set1, &set2| set1 & set2));
+    }
+
+    Ok(sum.to_string())
 }
 
 #[cfg(test)]
@@ -97,22 +140,25 @@ mod tests {
 
     #[fixture]
     fn input() -> Vec<String> {
-        "
-vJrwpWtwJgWrhcsFMMfFFhFp
+        "vJrwpWtwJgWrhcsFMMfFFhFp
 jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL
 PmmdzqPrVvPwwTWBwg
 wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
 ttgJtRGJQctTZtZT
-CrZsJsPPZsGzwwsLwLmpwMDw
-"
-        .split('\n')
-        .map(|s| s.to_string())
-        .collect()
+CrZsJsPPZsGzwwsLwLmpwMDw"
+            .split('\n')
+            .map(|s| s.to_string())
+            .collect()
     }
 
     #[rstest]
     fn test_part1(input: Vec<String>) {
         assert_eq!(part1(input).unwrap(), "157");
+    }
+
+    #[rstest]
+    fn test_part2(input: Vec<String>) {
+        assert_eq!(part2(input).unwrap(), "70")
     }
 
     #[rstest]
@@ -136,7 +182,22 @@ CrZsJsPPZsGzwwsLwLmpwMDw
         let a: HashSet<_> = "abc".chars().collect();
         let b: HashSet<_> = "bcd".chars().collect();
 
-        let i: HashSet<_> = a.intersection(&b).collect();
+        let i: HashSet<_> = a.intersection(&b).cloned().collect();
         assert_eq!(i.priority(), 'b'.priority() + 'c'.priority());
+    }
+
+    // -- Part 2
+
+    #[rstest]
+    fn test_group(input: Vec<String>) {
+        let rucksacks = get_rucksacks(input).unwrap();
+        let groups = get_groups(&rucksacks).unwrap();
+        assert_eq!(groups.len(), 2);
+        assert_eq!(groups[0][0], rucksacks[0]);
+        assert_eq!(groups[0][1], rucksacks[1]);
+        assert_eq!(groups[0][2], rucksacks[2]);
+        assert_eq!(groups[1][0], rucksacks[3]);
+        assert_eq!(groups[1][1], rucksacks[4]);
+        assert_eq!(groups[1][2], rucksacks[5]);
     }
 }
