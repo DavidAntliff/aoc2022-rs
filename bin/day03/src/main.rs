@@ -204,10 +204,12 @@ jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL
 PmmdzqPrVvPwwTWBwg
 wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
 ttgJtRGJQctTZtZT
-CrZsJsPPZsGzwwsLwLmpwMDw"
-            .split('\n')
-            .map(|s| s.to_string())
-            .collect()
+CrZsJsPPZsGzwwsLwLmpwMDw
+"
+        .trim()
+        .split('\n')
+        .map(|s| s.to_string())
+        .collect()
     }
 
     #[rstest]

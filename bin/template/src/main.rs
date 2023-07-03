@@ -24,6 +24,7 @@ mod tests {
     fn input() -> Vec<String> {
         "
 "
+        .trim()
         .split('\n')
         .map(|s| s.to_string())
         .collect()
