@@ -120,18 +120,24 @@ fn get_rucksacks(input: Vec<String>) -> Result<Vec<Rucksack>> {
 }
 
 fn part1(input: Vec<String>) -> Result<String> {
-    let rucksacks = get_rucksacks(input)?;
+    // for each item in rucksacks, get intersection and calculate priority
+    // let rucksacks = get_rucksacks(input)?;
+    // let mut priority_sum = 0;
+    // for rucksack in rucksacks {
+    //     let in_both: HashSet<_> = rucksack.0.intersection(&rucksack.1).cloned().collect();
+    //     //dbg!("{:?}", &in_both);
+    //
+    //     priority_sum += in_both.priority();
+    // }
+    //Ok(priority_sum.to_string())
 
-    // for each item in ruckscks, get intersection and calculate priority
-    let mut priority_sum = 0;
-    for rucksack in rucksacks {
-        let in_both: HashSet<_> = rucksack.0.intersection(&rucksack.1).cloned().collect();
-        //dbg!("{:?}", &in_both);
-
-        priority_sum += in_both.priority();
-    }
-
-    Ok(priority_sum.to_string())
+    // Alternative using combinators:
+    Ok(get_rucksacks(input)?
+        .iter()
+        .map(|r| r.0.intersection(&r.1).cloned().collect::<HashSet<Item>>())
+        .map(|r| r.priority())
+        .sum::<i32>()
+        .to_string())
 }
 
 fn get_groups(rucksacks: &Vec<Rucksack>) -> Result<Vec<&[Rucksack]>> {
