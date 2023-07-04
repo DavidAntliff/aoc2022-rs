@@ -6,7 +6,10 @@ use common::select_and_solve;
 // nom imports
 use nom::{
     bytes::complete::{tag, take_while},
+    character::complete::{char, digit1},
+    combinator::map_res,
     error::Error,
+    sequence::{separated_pair, tuple},
     Finish, IResult,
 };
 use std::str::FromStr;
@@ -79,12 +82,70 @@ impl FromStr for Line {
     }
 }
 
-fn part1(input: Vec<String>) -> Result<String> {
-    Ok("1".to_owned())
+// Now let's try a simpler parser:
+fn nom_parse(s: &str) -> IResult<&str, Line> {
+    // Since we wish to use 'position' multiple times in the parser, we need to
+    // implement our own copy via a function wrapper:
+    // https://stackoverflow.com/questions/70236597/why-cant-i-use-the-same-parser-twice-in-a-tuple
+    //let mut position = map_res(digit1, |s: &str| s.parse::<usize>());
+    fn position(input: &str) -> IResult<&str, usize> {
+        map_res(digit1, |s: &str| s.parse::<usize>())(input)
+    }
+
+    let (s, ((pos1, pos2), _, (pos3, pos4))) = tuple((
+        separated_pair(position, char('-'), position),
+        char(','),
+        separated_pair(position, char('-'), position),
+    ))(s)?;
+
+    // Or we can use nested seperated_pair calls:
+    // let (s, (((pos1, pos2), (pos3, pos4)),)) = tuple((separated_pair(
+    //     separated_pair(position, char('-'), position),
+    //     char(','),
+    //     separated_pair(position, char('-'), position),
+    // ),))(s)?;
+
+    Ok((
+        s,
+        Line {
+            first: Range {
+                start: pos1,
+                end: pos2,
+            },
+            second: Range {
+                start: pos3,
+                end: pos4,
+            },
+        },
+    ))
 }
 
-fn part2(_input: Vec<String>) -> Result<String> {
-    Ok("2".to_owned())
+fn get_lines(input: Vec<String>) -> Result<Vec<Line>> {
+    let lines_results: Vec<IResult<_, Line>> = input.iter().map(|s| nom_parse(s)).collect();
+
+    let lines: Vec<Line> = lines_results.into_iter().map(|x| x.unwrap().1).collect();
+    Ok(lines)
+}
+
+fn part1(input: Vec<String>) -> Result<String> {
+    let num = get_lines(input)?
+        .iter()
+        .filter(|x| {
+            (x.first.start >= x.second.start && x.first.end <= x.second.end)
+                || (x.second.start >= x.first.start && x.second.end <= x.first.end)
+        })
+        .count();
+
+    Ok(num.to_string())
+}
+
+fn part2(input: Vec<String>) -> Result<String> {
+    let num = get_lines(input)?
+        .iter()
+        .filter(|x| (x.first.start <= x.second.end && x.first.end >= x.second.start))
+        .count();
+
+    Ok(num.to_string())
 }
 
 #[cfg(test)]
@@ -114,7 +175,7 @@ mod tests {
 
     #[rstest]
     fn test_part2(input: Vec<String>) {
-        assert_eq!(part2(input).unwrap(), "2");
+        assert_eq!(part2(input).unwrap(), "4");
     }
 
     #[test]
@@ -128,6 +189,16 @@ mod tests {
     #[test]
     fn test_parse_line() {
         let l = Line::from_str("123-456,789-1012").unwrap();
+        dbg!(&l);
+        assert_eq!(l.first.start, 123);
+        assert_eq!(l.first.end, 456);
+        assert_eq!(l.second.start, 789);
+        assert_eq!(l.second.end, 1012);
+    }
+
+    #[test]
+    fn test_nom_parse() {
+        let (_, l) = nom_parse("123-456,789-1012").unwrap();
         dbg!(&l);
         assert_eq!(l.first.start, 123);
         assert_eq!(l.first.end, 456);
