@@ -205,11 +205,14 @@ move 1 from 1 to 2"
         let drawing: Vec<String> = "    [D]    
 [N] [C]    
 [Z] [M] [P]
- 1   2   3 
-"
-        .split('\n')
-        .map(|s| s.to_string())
-        .collect();
-        let state = State::try_from(drawing);
+ 1   2   3 "
+            .split('\n')
+            .map(|s| s.to_string())
+            .collect();
+        let state = State::try_from(drawing).expect("");
+        assert_eq!(state.stacks.len(), 3);
+        assert_eq!(state.stacks[0], vec!['Z', 'N']);
+        assert_eq!(state.stacks[1], vec!['M', 'C', 'D']);
+        assert_eq!(state.stacks[2], vec!['P']);
     }
 }
