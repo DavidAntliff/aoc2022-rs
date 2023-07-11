@@ -27,8 +27,7 @@ pub fn load_input(filename: &str) -> Result<Vec<String>> {
 
 pub fn solve(input_filename: &str, func: impl Fn(Vec<String>) -> Result<String>) -> Result<String> {
     let input_data = load_input(input_filename)?;
-    let solution = func(input_data);
-    solution
+    func(input_data)
 }
 
 pub fn select_and_solve<F1, F2>(input1: &str, part1: F1, input2: &str, part2: F2) -> Result<String>

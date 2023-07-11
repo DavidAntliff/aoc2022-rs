@@ -38,8 +38,8 @@ mod item {
     impl Priority for Item {
         fn priority(&self) -> i32 {
             match self {
-                Item('a'..='z') => 1 + (self.0 as i32 - 'a' as i32) as i32,
-                Item('A'..='Z') => 27 + (self.0 as i32 - 'A' as i32) as i32,
+                Item('a'..='z') => 1 + self.0 as i32 - 'a' as i32,
+                Item('A'..='Z') => 27 + self.0 as i32 - 'A' as i32,
                 _ => unreachable!(),
             }
         }
@@ -181,7 +181,7 @@ fn part2(input: Vec<String>) -> Result<String> {
             .next()
             .map(|set| {
                 iter.fold(set.clone(), |set1, set2| {
-                    set1.intersection(&set2).cloned().collect()
+                    set1.intersection(set2).cloned().collect()
                 })
             })
             .ok_or(eyre!("bad"))?;

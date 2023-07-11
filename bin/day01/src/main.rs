@@ -7,6 +7,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 fn part1(input: Vec<String>) -> Result<String> {
     let mut sum = 0;
     let mut max = 0;
@@ -39,6 +40,7 @@ fn part1_alt(input: Vec<String>) -> Result<String> {
     Ok(elven_lead.to_string())
 }
 
+#[allow(dead_code)]
 fn part2(input: Vec<String>) -> Result<String> {
     let mut sum = 0;
     let mut values = vec![];

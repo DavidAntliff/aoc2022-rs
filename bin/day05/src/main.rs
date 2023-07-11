@@ -30,8 +30,16 @@ fn part1(input: Vec<String>) -> Result<String> {
     Ok(state.output())
 }
 
-fn part2(_input: Vec<String>) -> Result<String> {
-    Ok("2".to_owned())
+fn part2(input: Vec<String>) -> Result<String> {
+    let (drawing, moves) = split_input(input);
+    let mut state = State::try_from(drawing)?;
+    let moves: Vec<Move> = moves
+        .iter()
+        .map(|s| Move::try_from(s.as_str()))
+        .collect::<Result<Vec<Move>>>()?;
+
+    state.do_moves_9001(moves);
+    Ok(state.output())
 }
 
 fn split_input(mut input: Vec<String>) -> (Vec<String>, Vec<String>) {
@@ -97,6 +105,24 @@ impl State {
                 .pop()
                 .expect("stack is not empty");
             self.stacks[mv.dst as usize].push(item);
+        }
+    }
+
+    // Part 2
+    fn do_moves_9001(&mut self, moves: Vec<Move>) {
+        for mv in moves {
+            self.do_move_9001(mv);
+        }
+    }
+
+    fn do_move_9001(&mut self, mv: Move) {
+        let src_stack = &mut self.stacks[mv.src as usize];
+        let new_len = src_stack.len() - mv.count as usize;
+        let moved_items: Vec<char> = src_stack.drain(new_len..).collect();
+
+        let dst_stack = &mut self.stacks[mv.dst as usize];
+        for i in moved_items {
+            dst_stack.push(i);
         }
     }
 
@@ -181,7 +207,7 @@ move 1 from 1 to 2"
 
     #[rstest]
     fn test_part2(input: Vec<String>) {
-        assert_eq!(part2(input).unwrap(), "2");
+        assert_eq!(part2(input).unwrap(), "MCD");
     }
 
     #[test]
