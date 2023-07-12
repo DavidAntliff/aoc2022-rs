@@ -121,9 +121,10 @@ impl State {
         let moved_items: Vec<char> = src_stack.drain(new_len..).collect();
 
         let dst_stack = &mut self.stacks[mv.dst as usize];
-        for i in moved_items {
-            dst_stack.push(i);
-        }
+        // for i in moved_items {
+        //     dst_stack.push(i);
+        // }
+        dst_stack.extend(moved_items);
     }
 
     fn output(&self) -> String {
