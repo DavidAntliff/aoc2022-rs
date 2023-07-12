@@ -9,3 +9,6 @@ edition = "2021"
 common = { path = "../../lib/common" }
 color-eyre = { workspace = true }
 rstest = { workspace = true }
+
+[dev-dependencies]
+test-case = { workspace = true }

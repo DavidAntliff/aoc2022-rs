@@ -69,34 +69,23 @@ fn find_marker_alt(length: usize, s: &str) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
-    #[test]
-    fn test_part1() {
-        assert_eq!(find_sop_marker("mjqjpqmgbljsphdztnvjfqwrcgsmlb"), Some(7));
-        assert_eq!(find_sop_marker("bvwbjplbgvbhsrlpgdmjqwftvncz"), Some(5));
-        assert_eq!(find_sop_marker("nppdvjthqldpwncqszvftbrmjlhg"), Some(6));
-        assert_eq!(
-            find_sop_marker("nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg"),
-            Some(10)
-        );
-        assert_eq!(
-            find_sop_marker("zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw"),
-            Some(11)
-        );
+    #[test_case(7, "mjqjpqmgbljsphdztnvjfqwrcgsmlb")]
+    #[test_case(5, "bvwbjplbgvbhsrlpgdmjqwftvncz")]
+    #[test_case(6, "nppdvjthqldpwncqszvftbrmjlhg")]
+    #[test_case(10, "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg")]
+    #[test_case(11, "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw")]
+    fn test_find_sop_marker(index: usize, input: &str) {
+        assert_eq!(Some(index), find_sop_marker(input));
     }
 
-    #[test]
-    fn test_part2() {
-        assert_eq!(find_som_marker("mjqjpqmgbljsphdztnvjfqwrcgsmlb"), Some(19));
-        assert_eq!(find_som_marker("bvwbjplbgvbhsrlpgdmjqwftvncz"), Some(23));
-        assert_eq!(find_som_marker("nppdvjthqldpwncqszvftbrmjlhg"), Some(23));
-        assert_eq!(
-            find_som_marker("nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg"),
-            Some(29)
-        );
-        assert_eq!(
-            find_som_marker("zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw"),
-            Some(26)
-        );
+    #[test_case(19, "mjqjpqmgbljsphdztnvjfqwrcgsmlb")]
+    #[test_case(23, "bvwbjplbgvbhsrlpgdmjqwftvncz")]
+    #[test_case(23, "nppdvjthqldpwncqszvftbrmjlhg")]
+    #[test_case(29, "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg")]
+    #[test_case(26, "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw")]
+    fn test_find_som_marker(index: usize, input: &str) {
+        assert_eq!(Some(index), find_som_marker(input));
     }
 }
