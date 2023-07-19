@@ -1,5 +1,5 @@
 [package]
-name = "day04"
+name = "day07"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,3 +10,4 @@ common = { path = "../../lib/common" }
 color-eyre = { workspace = true }
 rstest = { workspace = true }
 nom = { workspace = true }
+camino = "1.1.4"
