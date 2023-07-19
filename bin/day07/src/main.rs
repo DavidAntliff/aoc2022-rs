@@ -47,13 +47,25 @@ fn parse_cd(i: &str) -> IResult<&str, Cd> {
 
 #[derive(Debug, PartialEq)]
 enum Command {
-    Ls(Ls),
-    Cd(Cd),
+    Ls,
+    Cd(Utf8PathBuf),
+}
+
+impl From<Ls> for Command {
+    fn from(_ls: Ls) -> Self {
+        Command::Ls
+    }
+}
+
+impl From<Cd> for Command {
+    fn from(cd: Cd) -> Self {
+        Command::Cd(cd.0)
+    }
 }
 
 fn parse_command(i: &str) -> IResult<&str, Command> {
     let (i, _) = tag("$ ")(i)?;
-    alt((map(parse_ls, Command::Ls), map(parse_cd, Command::Cd)))(i)
+    alt((map(parse_ls, Into::into), map(parse_cd, Into::into)))(i)
 }
 
 // Parse entries
@@ -160,9 +172,9 @@ $ ls
     fn test_parse_command() {
         assert_eq!(
             parse_command("$ cd abc.def"),
-            Ok(("", Command::Cd(Cd(Utf8PathBuf::from("abc.def")))))
+            Ok(("", Command::Cd("abc.def".into())))
         );
-        assert_eq!(parse_command("$ ls\na\nb"), Ok(("\na\nb", Command::Ls(Ls))));
+        assert_eq!(parse_command("$ ls\na\nb"), Ok(("\na\nb", Command::Ls)));
     }
 
     #[test]
@@ -182,10 +194,10 @@ $ ls
 
     #[test]
     fn test_parse_line() {
-        assert_eq!(parse_line("$ ls"), Ok(("", Line::Command(Command::Ls(Ls)))));
+        assert_eq!(parse_line("$ ls"), Ok(("", Line::Command(Command::Ls))));
         assert_eq!(
             parse_line("$ cd foo"),
-            Ok(("", Line::Command(Command::Cd(Cd("foo".into())))))
+            Ok(("", Line::Command(Command::Cd("foo".into()))))
         );
         assert_eq!(
             parse_line("dir abcdef"),
