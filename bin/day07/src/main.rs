@@ -1,4 +1,4 @@
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{eyre, Result};
 use common::select_and_solve;
 
 use camino::Utf8PathBuf;
@@ -8,18 +8,110 @@ use nom::combinator::{all_consuming, map};
 use nom::sequence::{preceded, separated_pair};
 use nom::{Finish, IResult};
 
+use id_tree::{InsertBehavior, Node, Tree};
+
 fn main() -> Result<()> {
     color_eyre::install()?;
     select_and_solve("inputs/day07.1", part1, "inputs/day07.2", part2)?;
     Ok(())
 }
 
-fn part1(_input: Vec<String>) -> Result<String> {
-    Ok("1".to_owned())
+fn make_tree(input: Vec<String>) -> Result<Tree<FsEntry>> {
+    // Parse the input
+    let lines = input
+        .iter()
+        .map(|l| all_consuming(parse_line)(l).finish().unwrap().1);
+
+    // Initialise a tree
+    let mut tree = Tree::<FsEntry>::new();
+    let root = tree.insert(
+        Node::new(FsEntry {
+            size: 0,
+            path: "/".into(),
+        }),
+        InsertBehavior::AsRoot,
+    )?;
+    let mut curr = root;
+
+    // Build the tree
+    for line in lines {
+        println!("{line:?}");
+        match line {
+            Line::Command(cmd) => match cmd {
+                Command::Ls => { // ignore
+                }
+                Command::Cd(path) => match path.as_str() {
+                    "/" => { // ignore
+                    }
+                    ".." => {
+                        curr = tree.get(&curr)?.parent().unwrap().clone();
+                    }
+                    _ => {
+                        let node = Node::new(FsEntry {
+                            size: 0,
+                            path: path.clone(),
+                        });
+                        curr = tree.insert(node, InsertBehavior::UnderNode(&curr))?;
+                    }
+                },
+            },
+            Line::Entry(entry) => match entry {
+                Entry::Dir(_) => { // ignore
+                }
+                Entry::File { size, path } => {
+                    let node = Node::new(FsEntry { size, path });
+                    tree.insert(node, InsertBehavior::UnderNode(&curr));
+                }
+            },
+        }
+    }
+
+    // Print the tree
+    let mut s = String::new();
+    tree.write_formatted(&mut s)?;
+    println!("{s}");
+
+    Ok(tree)
 }
 
-fn part2(_input: Vec<String>) -> Result<String> {
-    Ok("2".to_owned())
+fn part1(input: Vec<String>) -> Result<String> {
+    let tree = make_tree(input)?;
+
+    let sum = tree
+        .traverse_pre_order(tree.root_node_id().unwrap())?
+        // only consider folders:
+        .filter(|n| !n.children().is_empty())
+        .map(|n| total_size(&tree, n).unwrap())
+        .filter(|&s| s <= 100_000)
+        .inspect(|s| {
+            dbg!(s);
+        })
+        .sum::<u64>();
+
+    Ok(sum.to_string())
+}
+
+fn part2(input: Vec<String>) -> Result<String> {
+    let tree = make_tree(input)?;
+
+    let total_space = 70000000_u64;
+    let used_space = total_size(&tree, tree.get(tree.root_node_id().unwrap())?)?;
+    let free_space = total_space.checked_sub(dbg!(used_space)).unwrap();
+    let needed_free_space = 30000000_u64;
+    let minimum_space_to_free = needed_free_space.checked_sub(free_space).unwrap();
+
+    let size_to_remove = tree
+        .traverse_pre_order(tree.root_node_id().unwrap())?
+        .filter(|n| !n.children().is_empty())
+        .map(|n| total_size(&tree, n).unwrap())
+        .filter(|&s| s >= minimum_space_to_free)
+        .inspect(|s| {
+            dbg!(s);
+        })
+        .min()
+        .ok_or(eyre!("bad"))?;
+
+    Ok(size_to_remove.to_string())
 }
 
 // https://fasterthanli.me/series/advent-of-code-2022/part-7#part-1
@@ -99,6 +191,21 @@ fn parse_line(i: &str) -> IResult<&str, Line> {
     ))(i)
 }
 
+// Use id_tree for tree structure
+#[derive(Debug)]
+struct FsEntry {
+    size: u64,
+    path: Utf8PathBuf,
+}
+
+fn total_size(tree: &Tree<FsEntry>, node: &Node<FsEntry>) -> Result<u64> {
+    let mut total = node.data().size;
+    for child in node.children() {
+        total += total_size(tree, tree.get(child)?)?;
+    }
+    Ok(total)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,12 +246,12 @@ $ ls
 
     #[rstest]
     fn test_part1(input: Vec<String>) {
-        assert_eq!(part1(input).unwrap(), "1");
+        assert_eq!(part1(input).unwrap(), "95437");
     }
 
     #[rstest]
     fn test_part2(input: Vec<String>) {
-        assert_eq!(part2(input).unwrap(), "2");
+        assert_eq!(part2(input).unwrap(), "24933642");
     }
 
     #[test]
