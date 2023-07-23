@@ -8,4 +8,5 @@ members = [
 clap = { version = "4.3", features = ["derive"]}
 color-eyre = "0.6"
 rstest = "0.17"
+test-case = "3.1"
 nom = "7.1"
