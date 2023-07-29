@@ -60,7 +60,7 @@ fn make_tree(input: Vec<String>) -> Result<Tree<FsEntry>> {
                 }
                 Entry::File { size, path } => {
                     let node = Node::new(FsEntry { size, path });
-                    tree.insert(node, InsertBehavior::UnderNode(&curr));
+                    tree.insert(node, InsertBehavior::UnderNode(&curr))?;
                 }
             },
         }
@@ -192,6 +192,7 @@ fn parse_line(i: &str) -> IResult<&str, Line> {
 }
 
 // Use id_tree for tree structure
+#[allow(dead_code)]
 #[derive(Debug)]
 struct FsEntry {
     size: u64,
