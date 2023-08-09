@@ -94,8 +94,80 @@ fn part1(input: Vec<String>) -> Result<String> {
     Ok(num_visible.to_string())
 }
 
-fn part2(_input: Vec<String>) -> Result<String> {
-    Ok("2".to_owned())
+fn max_scenic_score(heights: &Grid<u32>) -> u32 {
+    println!("r c h n s e w s");
+
+    let (rows, cols) = heights.size();
+    let mut max_score = 0;
+    for r in 0..rows {
+        for c in 0..cols {
+            let score = scenic_score(heights, r, c);
+            if score > max_score {
+                max_score = score;
+            }
+        }
+    }
+    max_score
+}
+
+fn scenic_score(heights: &Grid<u32>, or: usize, oc: usize) -> u32 {
+    let (rows, cols) = heights.size();
+    let h = heights[or][oc];
+
+    // to the north:
+    let mut north_score = 0;
+    if or > 0 {
+        for r in (0..=or - 1).rev() {
+            north_score += 1;
+            if heights[r][oc] >= h {
+                break;
+            }
+        }
+    }
+
+    // to the south:
+    let mut south_score = 0;
+    if or < rows - 1 {
+        for r in or + 1..rows {
+            south_score += 1;
+            if heights[r][oc] >= h {
+                break;
+            }
+        }
+    }
+
+    // to the east:
+    let mut east_score = 0;
+    if oc < cols - 1 {
+        for c in oc + 1..cols {
+            east_score += 1;
+            if heights[or][c] >= h {
+                break;
+            }
+        }
+    }
+
+    // to the west:
+    let mut west_score = 0;
+    if oc > 0 {
+        for c in (0..=oc - 1).rev() {
+            west_score += 1;
+            if heights[or][c] >= h {
+                break;
+            }
+        }
+    }
+
+    let scenic_score = north_score * south_score * east_score * west_score;
+    //println!("{or} {oc} {h} {north_score} {south_score} {east_score} {west_score} {scenic_score}");
+
+    scenic_score
+}
+
+fn part2(input: Vec<String>) -> Result<String> {
+    let heights = make_grid(input);
+    let score = max_scenic_score(&heights);
+    Ok(score.to_string())
 }
 
 #[cfg(test)]
@@ -126,7 +198,7 @@ mod tests {
 
     #[rstest]
     fn test_part2(input: Vec<String>) {
-        assert_eq!(part2(input).unwrap(), "2");
+        assert_eq!(part2(input).unwrap(), "8");
     }
 
     #[test]
