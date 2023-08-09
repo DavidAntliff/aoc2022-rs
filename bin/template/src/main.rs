@@ -3,7 +3,13 @@ use common::select_and_solve;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    select_and_solve("inputs/dayXX.1", part1, "inputs/dayXX.2", part2)?;
+    let name = env!("CARGO_PKG_NAME");
+    select_and_solve(
+        format!("inputs/{name}.1").as_str(),
+        part1,
+        format!("inputs/{name}.2").as_str(),
+        part2,
+    )?;
     Ok(())
 }
 
