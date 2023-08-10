@@ -37,16 +37,54 @@ fn part1(input: Vec<String>) -> Result<String> {
     // T starts at same location as H
     visited.insert(tail);
 
+    let top_left = Coord(-5, 5);
+    let bottom_right = Coord(5, -5);
+    println!("start:");
+    print_grid(&head, &tail, &visited, top_left, bottom_right);
+
     for mv in moves {
         head = head.move_by(&mv);
+        println!("head moves to: {mv:?}");
+        print_grid(&head, &tail, &visited, top_left, bottom_right);
+
         let tail_moves = catch_up(&head, &tail);
         for mv in tail_moves {
             tail = mv;
             visited.insert(tail);
+
+            println!("tail moves to: {mv:?}");
+            print_grid(&head, &tail, &visited, top_left, bottom_right);
         }
     }
 
     Ok(visited.iter().count().to_string())
+}
+
+fn print_grid(
+    head: &Coord,
+    tail: &Coord,
+    visited: &HashSet<Coord>,
+    top_left: Coord,
+    bottom_right: Coord,
+) {
+    let (min_x, max_x) = (top_left.0, bottom_right.0);
+    let (max_y, min_y) = (top_left.1, bottom_right.1);
+    for y in (min_y..=max_y).rev() {
+        for x in min_x..=max_x {
+            if Coord(x, y) == *head {
+                print!("H")
+            } else if Coord(x, y) == *tail {
+                print!("T");
+            } else if visited.contains(&Coord(x, y)) {
+                print!("#");
+            } else if x == 0 && y == 0 {
+                print!("s");
+            } else {
+                print!(".");
+            }
+        }
+        println!();
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Add, Sub)]
