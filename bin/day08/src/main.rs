@@ -158,10 +158,7 @@ fn scenic_score(heights: &Grid<u32>, or: usize, oc: usize) -> u32 {
         }
     }
 
-    let scenic_score = north_score * south_score * east_score * west_score;
-    //println!("{or} {oc} {h} {north_score} {south_score} {east_score} {west_score} {scenic_score}");
-
-    scenic_score
+    north_score * south_score * east_score * west_score
 }
 
 fn part2(input: Vec<String>) -> Result<String> {

@@ -57,7 +57,7 @@ fn part1(input: Vec<String>) -> Result<String> {
         }
     }
 
-    Ok(visited.iter().count().to_string())
+    Ok(visited.len().to_string())
 }
 
 fn print_grid(
@@ -156,8 +156,105 @@ fn parse_moves(input: Vec<String>) -> Result<Vec<Coord>> {
     moves.map_err(|e| eyre!("parse failed: {}", e))
 }
 
-fn part2(_input: Vec<String>) -> Result<String> {
-    Ok("2".to_owned())
+fn part2(input: Vec<String>) -> Result<String> {
+    // H, T(1..9) starts at (0, 0).
+    // For each instruction, H moves a number of steps in a single direction.
+    // Each T in ascending order then moves to "catch up" with the preceding knot,
+    // reducing the distance between it and the knot to at no
+    // more than 1 unit orthogonally or diagonally.
+    // When catching up, if a diagonal move is necessary, it occurs first.
+    // Keep track of all the unique locations visited by T[9].
+
+    let moves = parse_moves(input)?;
+
+    // To simulate as per part 2, we need to split the moves into
+    // single-move moves:
+    let moves = split_moves(moves);
+
+    let mut visited: HashSet<Coord> = HashSet::new();
+
+    const NUM_KNOTS: usize = 10;
+    const HEAD: usize = 0;
+    const T9: usize = NUM_KNOTS - 1;
+
+    let mut knots = vec![Coord(0, 0); NUM_KNOTS];
+
+    // T9 starts at same location as T8, ..., H
+    visited.insert(knots[T9]);
+
+    let top_left = Coord(-11, 11);
+    let bottom_right = Coord(15, -11);
+    println!("start:");
+    print_grid_v2(&knots, &visited, top_left, bottom_right);
+
+    let last_idx = knots.len() - 1;
+
+    for mv in moves {
+        knots[HEAD] = knots[HEAD].move_by(&mv);
+        println!("head moves to: {mv:?}");
+
+        for i in 1..knots.len() {
+            let prev_knot = knots[i - 1];
+            let tail_moves = catch_up(&prev_knot, &knots[i]);
+            for mv in tail_moves {
+                knots[i] = mv;
+
+                // Add T9 to the record of locations
+                if i == last_idx {
+                    visited.insert(knots[i]);
+                }
+
+                println!("T{i} moves to: {mv:?}");
+            }
+        }
+    }
+    print_grid_v2(&knots, &visited, top_left, bottom_right);
+
+    Ok(visited.len().to_string())
+}
+
+fn split_moves(moves: Vec<Coord>) -> Vec<Coord> {
+    // Split each move into a sequence of single-step moves.
+    // E.g. Coord(3, 0) becomes [Coord(1, 0), Coord(1, 0), Coord(1, 0)]
+    let mut new_moves: Vec<_> = vec![];
+    for mv in moves {
+        let c = mv.0 + mv.1; // since orthogonal, either is zero
+        for _ in 0..c.abs() {
+            new_moves.push(Coord(mv.0.signum(), mv.1.signum()));
+        }
+    }
+    new_moves
+}
+
+fn print_grid_v2(knots: &[Coord], visited: &HashSet<Coord>, top_left: Coord, bottom_right: Coord) {
+    let (min_x, max_x) = (top_left.0, bottom_right.0);
+    let (max_y, min_y) = (top_left.1, bottom_right.1);
+    for y in (min_y..=max_y).rev() {
+        for x in min_x..=max_x {
+            let mut knot_printed = false;
+            for (i, knot) in knots.iter().enumerate() {
+                if Coord(x, y) == *knot {
+                    if i == 0 {
+                        print!("H");
+                    } else {
+                        print!("{}", i);
+                    }
+                    knot_printed = true;
+                    break;
+                }
+            }
+            if !knot_printed {
+                if visited.contains(&Coord(x, y)) {
+                    print!("#");
+                } else if x == 0 && y == 0 {
+                    print!("s");
+                } else {
+                    print!(".");
+                }
+            }
+        }
+        println!();
+    }
 }
 
 #[cfg(test)]
@@ -190,7 +287,7 @@ R 2
 
     #[rstest]
     fn test_part2(input: Vec<String>) {
-        assert_eq!(part2(input).unwrap(), "2");
+        assert_eq!(part2(input).unwrap(), "1");
     }
 
     #[test]
@@ -253,14 +350,34 @@ R 2
         assert_eq!(catch_up(&head, &tail), vec![Coord(1, 1), Coord(1, 2)]);
     }
 
-    // #[test]
-    // fn test_parse_steps() {
-    //     assert_eq!(parse_steps("1"), Ok(("", 1)));
-    //     assert_eq!(parse_steps("12"), Ok(("", 12)));
-    // }
+    #[fixture]
+    fn larger_input() -> Vec<String> {
+        "
+R 5
+U 8
+L 8
+D 3
+R 17
+D 10
+L 25
+U 20
+"
+        .trim()
+        .split('\n')
+        .map(|s| s.to_string())
+        .collect()
+    }
 
-    // #[test]
-    // fn test_parse_move() {
-    //     assert_eq!(parse_move("U 1"), Move::Up(1));
-    // }
+    #[rstest]
+    fn test_part2_larger(larger_input: Vec<String>) {
+        assert_eq!(part2(larger_input).unwrap(), "36");
+    }
+
+    #[test]
+    fn test_split_moves() {
+        assert_eq!(split_moves(vec![]), vec![]);
+        assert_eq!(split_moves(vec![Coord(0, 0)]), vec![]);
+        assert_eq!(split_moves(vec![Coord(1, 0)]), vec![Coord(1, 0)]);
+        assert_eq!(split_moves(vec![Coord(-3, 0)]), vec![Coord(-1, 0); 3]);
+    }
 }
