@@ -1,6 +1,7 @@
 use color_eyre::eyre::{eyre, Result};
 use common::select_and_solve;
 use derive_more::{Add, Sub};
+use eframe::egui;
 use nom::character::complete::{digit1, multispace0};
 use nom::combinator::map_res;
 use nom::sequence::tuple;
@@ -12,11 +13,39 @@ fn main() -> Result<()> {
     let name = env!("CARGO_PKG_NAME");
     select_and_solve(
         format!("inputs/{name}.1").as_str(),
-        part1,
+        part1_egui,
         format!("inputs/{name}.2").as_str(),
         part2,
     )?;
     Ok(())
+}
+
+fn part1_egui(input: Vec<String>) -> Result<String> {
+    let options = eframe::NativeOptions {
+        initial_window_size: Some(egui::vec2(800.0, 600.0)),
+        ..Default::default()
+    };
+    eframe::run_native(
+        "AoC 2022 - Day 9 Part 1",
+        options,
+        Box::new(|_cc| Box::new(MyApp { input })),
+    )
+    .expect("run_native failed");
+
+    Ok("".to_string())
+}
+
+struct MyApp {
+    input: Vec<String>,
+}
+
+impl eframe::App for MyApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.heading("Moves:");
+            ui.label("➡".repeat(8));
+        });
+    }
 }
 
 fn part1(input: Vec<String>) -> Result<String> {
@@ -28,7 +57,6 @@ fn part1(input: Vec<String>) -> Result<String> {
     // Keep track of all the unique locations visited by T.
 
     let moves = parse_moves(input)?;
-
     let mut visited: HashSet<Coord> = HashSet::new();
 
     let mut head = Coord(0, 0);

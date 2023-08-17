@@ -11,3 +11,5 @@ color-eyre = { workspace = true }
 rstest = { workspace = true }
 nom = { workspace = true }
 derive_more = "0.99"
+egui = "0.22"
+eframe = "0.22"
