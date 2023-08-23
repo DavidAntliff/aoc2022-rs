@@ -177,7 +177,7 @@ fn part2(input: Vec<String>) -> Result<String> {
     const HEAD: usize = 0;
     const T9: usize = NUM_KNOTS - 1;
 
-    let mut knots = vec![Coord(0, 0); NUM_KNOTS];
+    let mut knots = [Coord(0, 0); NUM_KNOTS];
 
     // T9 starts at same location as T8, ..., H
     visited.insert(knots[T9]);
