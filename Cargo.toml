@@ -5,8 +5,11 @@ members = [
 ]
 
 [workspace.dependencies]
-clap = { version = "4.3", features = ["derive"]}
+clap = { version = "4.3", features = ["derive"] }
 color-eyre = "0.6"
 rstest = "0.17"
 test-case = "3.1"
 nom = "7.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+test-log = { version = "0.2", default-features = false, features = ["trace"] }

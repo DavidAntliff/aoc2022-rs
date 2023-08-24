@@ -10,3 +10,8 @@ common = { path = "../../lib/common" }
 color-eyre = { workspace = true }
 rstest = { workspace = true }
 nom = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+test-log = { workspace = true }

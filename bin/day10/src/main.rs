@@ -1,5 +1,6 @@
 use color_eyre::eyre::Result;
 use common::select_and_solve;
+use common::stack::Stack;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::digit1;
@@ -7,9 +8,16 @@ use nom::combinator::{all_consuming, map, map_res, opt, recognize};
 use nom::sequence::preceded;
 use nom::{Finish, IResult};
 use std::str::FromStr;
+use tracing::debug;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
+
+    let subscriber = tracing_subscriber::FmtSubscriber::builder()
+        .with_max_level(tracing::Level::DEBUG)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber)?;
+
     let name = env!("CARGO_PKG_NAME");
     select_and_solve(
         format!("inputs/{name}.1").as_str(),
@@ -47,7 +55,7 @@ fn parse_instruction(i: &str) -> IResult<&str, Instruction> {
     alt((parse_addx, parse_noop))(i)
 }
 
-fn parse_instructions(input: &Vec<String>) -> Result<Vec<Instruction>> {
+fn parse_instructions(input: &[String]) -> Result<Vec<Instruction>> {
     let instructions: Vec<Instruction> = input
         .iter()
         .map(|l| all_consuming(parse_instruction)(l).finish().unwrap().1)
@@ -56,88 +64,130 @@ fn parse_instructions(input: &Vec<String>) -> Result<Vec<Instruction>> {
 }
 
 struct Registers {
-    program_counter: usize, // always points to the currently-executing instruction
+    program_counter: usize, // always points to the *next* instruction
     x: i32,
-    addi_pending: i32,
 }
 
 struct Cpu {
-    halted: bool,
-    instructions: Vec<Instruction>, // instruction memory
-    cycles: u32,                    // number of cycles remaining for the current instruction
+    steps: Stack<Instruction>,
     registers: Registers,
+
+    // flags
+    halted: bool,
 }
 
 impl Cpu {
-    fn new(instructions: &Vec<Instruction>) -> Self {
-        let mut cpu = Self {
-            halted: false,
-            instructions: instructions.clone(),
-            cycles: 0,
+    fn new() -> Self {
+        Self {
+            steps: Stack::new(),
             registers: Registers {
                 program_counter: 0,
                 x: 1,
-                addi_pending: 0,
             },
-        };
-
-        cpu.load_instruction();
-
-        cpu
+            halted: false,
+        }
     }
 
-    fn load_instruction(&mut self) {
-        if self.registers.program_counter < self.instructions.len() {
-            match self.instructions[self.registers.program_counter] {
-                Instruction::Addx(x) => {
-                    self.registers.addi_pending = x;
-                    self.cycles = 2;
-                }
-                Instruction::Noop => {
-                    self.cycles = 1;
-                }
+    fn load_instruction(&mut self, instruction: &Instruction) {
+        debug!("load {instruction:?}");
+        match instruction {
+            Instruction::Addx(x) => {
+                // 2 cycles
+                self.steps.push(Instruction::Addx(*x));
+                self.steps.push(Instruction::Noop);
             }
-        } else {
-            self.halted = true;
+            Instruction::Noop => {
+                // 1 cycle
+                self.steps.push(*instruction);
+            }
         }
     }
 
     fn tick(&mut self) {
         if self.halted {
+            debug!("halted");
             return;
         }
 
-        let current_instruction = self.instructions[self.registers.program_counter];
-        self.cycles -= 1;
-        if self.cycles == 0 {
-            match current_instruction {
-                Instruction::Addx(_) => {
-                    self.registers.x += self.registers.addi_pending;
-                }
-                Instruction::Noop => {}
+        // pop the next step off the internal stack
+        let step = self.steps.pop().unwrap();
+        match step {
+            Instruction::Addx(x) => {
+                self.registers.x += x;
+                debug!("add {x}, x is now {}", self.registers.x);
             }
-            self.registers.program_counter += 1;
-            self.load_instruction();
-        }
-    }
-
-    fn execute(&mut self) {
-        let mut i = 0;
-        while !self.halted {
-            self.tick();
-            i += 1;
-            println!("{i}: {}", self.registers.x);
+            Instruction::Noop => {
+                debug!("noop");
+            }
         }
     }
 }
 
+struct Memory {
+    instructions: Vec<Instruction>, // instruction memory
+}
+
+impl Memory {
+    fn new(instructions: &[Instruction]) -> Self {
+        Self {
+            instructions: instructions.to_vec(),
+        }
+    }
+}
+
+fn cycle(cpu: &mut Cpu, memory: &Memory) {
+    // Execute one clock tick
+    if cpu.steps.is_empty() {
+        let instruction = memory.instructions.get(cpu.registers.program_counter);
+        match instruction {
+            Some(i) => {
+                cpu.registers.program_counter += 1;
+                cpu.load_instruction(i);
+            }
+            None => {
+                cpu.halted = true;
+            }
+        }
+    }
+
+    cpu.tick();
+}
+
+fn execute(cpu: &mut Cpu, memory: &Memory) -> Vec<i32> {
+    let mut trace = vec![];
+    let mut cycles = 0;
+    while !cpu.halted {
+        cycles += 1;
+        debug!("cycle {cycles}");
+        cycle(cpu, memory);
+        trace.push(cpu.registers.x);
+    }
+    trace
+}
+
 fn part1(input: Vec<String>) -> Result<String> {
-    let instructions = parse_instructions(&input)?;
-    let mut cpu = Cpu::new(&instructions);
+    let memory = Memory::new(&parse_instructions(&input)?);
+    let mut cpu = Cpu::new();
 
-    cpu.execute();
+    let trace = execute(&mut cpu, &memory);
 
-    Ok("1".to_owned())
+    for (i, v) in trace.iter().enumerate() {
+        println!("end of cycle {}: x {v}", i + 1);
+    }
+
+    println!("during cycle 20: x {}", trace[20 - 1 - 1]);
+    println!("during cycle 60: x {}", trace[60 - 1 - 1]);
+    println!("during cycle 100: x {}", trace[100 - 1 - 1]);
+    println!("during cycle 140: x {}", trace[140 - 1 - 1]);
+    println!("during cycle 180: x {}", trace[180 - 1 - 1]);
+    println!("during cycle 220: x {}", trace[220 - 1 - 1]);
+
+    let signal_strength = |x: &u32| -> i32 { trace[*x as usize - 1 - 1] * *x as i32 };
+
+    let cycles: [u32; 6] = [20, 60, 100, 140, 180, 220];
+    let sum: i32 = cycles.iter().map(signal_strength).sum();
+
+    Ok(sum.to_string())
 }
 
 fn part2(_input: Vec<String>) -> Result<String> {
@@ -148,6 +198,7 @@ fn part2(_input: Vec<String>) -> Result<String> {
 mod tests {
     use super::*;
     use rstest::*;
+    use test_log::test; // enable tracing during tests, set RUST_LOG=debug
 
     #[test]
     fn test_parse_i32() {
@@ -364,7 +415,7 @@ noop
 
     #[rstest]
     fn test_part1(input: Vec<String>) {
-        assert_eq!(part1(input).unwrap(), "1");
+        assert_eq!(part1(input).unwrap(), "13140");
     }
 
     #[rstest]

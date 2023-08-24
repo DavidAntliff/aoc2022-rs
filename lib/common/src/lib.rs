@@ -1,3 +1,5 @@
+pub mod stack;
+
 use color_eyre::eyre::{eyre, Context, Result};
 use std::env;
 use std::io::Read;
