@@ -190,7 +190,28 @@ fn part1(input: Vec<String>) -> Result<String> {
     Ok(sum.to_string())
 }
 
-fn part2(_input: Vec<String>) -> Result<String> {
+fn part2(input: Vec<String>) -> Result<String> {
+    let memory = Memory::new(&parse_instructions(&input)?);
+    let mut cpu = Cpu::new();
+
+    let trace = execute(&mut cpu, &memory);
+
+    for (i, v) in trace.iter().enumerate() {
+        let hor_pos = (i % 40) as i32;
+
+        if hor_pos == 0 {
+            println!();
+        }
+
+        let during = if i == 0 { 1 } else { trace[i - 1] };
+        let range = (during - 1)..=(during + 1);
+        if range.contains(&hor_pos) {
+            print!("#");
+        } else {
+            print!(".");
+        }
+    }
+
     Ok("2".to_owned())
 }
 
