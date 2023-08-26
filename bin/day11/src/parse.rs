@@ -16,29 +16,70 @@ use std::collections::VecDeque;
 
 pub type Span<'a> = LocatedSpan<&'a str>;
 
-#[derive(Debug, PartialEq)]
-pub struct Item(u32);
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Item(pub u32);
 
-#[derive(Debug, PartialEq)]
-pub struct MonkeyId(usize);
+#[derive(Debug, PartialEq, Clone)]
+pub struct MonkeyId(pub usize);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Operation {
     Add(u32),
     Multiply(u32),
     Square,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct ThrowTo(MonkeyId, MonkeyId);
+#[derive(Debug, PartialEq, Clone)]
+pub struct ThrowTo(pub MonkeyId, pub MonkeyId);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Monkey {
-    id: MonkeyId,
-    items: VecDeque<Item>,
-    operation: Operation,
-    divisor: u32,
-    throw_to: ThrowTo,
+    pub id: MonkeyId,
+    pub items: VecDeque<Item>,
+    pub operation: Operation,
+    pub divisor: u32,
+    pub throw_to: ThrowTo,
+}
+
+impl Item {
+    pub fn do_operation(&self, operation: &Operation) -> Self {
+        match operation {
+            Operation::Add(y) => {
+                let z = self.0 + y;
+                println!("    Worry level is increased by {y} to {z}.");
+                Self(z)
+            }
+            Operation::Multiply(y) => {
+                let z = self.0 * y;
+                println!("    Worry level is multiplied by {y} to {z}.");
+                Self(z)
+            }
+            Operation::Square => {
+                let z = self.0 * self.0;
+                println!("    Worry level is multiplied by itself to {z}.");
+                Self(z)
+            }
+        }
+    }
+
+    pub fn do_relief(&self) -> Self {
+        let z = self.0 / 3;
+        println!(
+            "    Monkey gets bored with item. Worry level is divided by 3 to {}.",
+            z
+        );
+        Self(z)
+    }
+
+    pub fn is_divisible_by(&self, divisor: u32) -> bool {
+        let divisible = self.0 % divisor == 0;
+        println!(
+            "    Current worry level is {}divisible by {}.",
+            if divisible { "" } else { "not " },
+            divisor
+        );
+        divisible
+    }
 }
 
 pub fn parse_monkey_id<'a, E: ParseError<Span<'a>>>(i: Span<'a>) -> IResult<Span<'a>, MonkeyId, E> {
