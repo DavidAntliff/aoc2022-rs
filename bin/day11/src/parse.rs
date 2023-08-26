@@ -1,14 +1,20 @@
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{eyre, Result};
+use miette::GraphicalReportHandler;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{char, newline, space0};
-use nom::combinator::all_consuming;
 use nom::combinator::map;
+use nom::error::ParseError;
 use nom::multi::separated_list1;
 use nom::sequence::preceded;
 use nom::sequence::tuple;
 use nom::IResult;
+use nom_locate::LocatedSpan;
+use nom_supreme::error::{BaseErrorKind, ErrorTree, GenericErrorTree};
+use nom_supreme::final_parser::final_parser;
 use std::collections::VecDeque;
+
+pub type Span<'a> = LocatedSpan<&'a str>;
 
 #[derive(Debug, PartialEq)]
 pub struct Item(u32);
@@ -35,7 +41,7 @@ pub struct Monkey {
     throw_to: ThrowTo,
 }
 
-pub fn parse_monkey_id(i: &str) -> IResult<&str, MonkeyId> {
+pub fn parse_monkey_id<'a, E: ParseError<Span<'a>>>(i: Span<'a>) -> IResult<Span<'a>, MonkeyId, E> {
     let (i, _) = tag("Monkey ")(i)?;
     let (i, id) = nom::character::complete::u32(i)?;
     let (i, _) = char(':')(i)?;
@@ -50,7 +56,9 @@ pub fn parse_monkey_id(i: &str) -> IResult<&str, MonkeyId> {
     // )(i)
 }
 
-pub fn parse_starting_items(i: &str) -> IResult<&str, Vec<Item>> {
+pub fn parse_starting_items<'a, E: ParseError<Span<'a>>>(
+    i: Span<'a>,
+) -> IResult<Span<'a>, Vec<Item>, E> {
     let (i, _) = space0(i)?;
     let (i, _) = tag("Starting items: ")(i)?;
     let (i, v) = separated_list1(tag(", "), nom::character::complete::u32)(i)?;
@@ -58,23 +66,31 @@ pub fn parse_starting_items(i: &str) -> IResult<&str, Vec<Item>> {
     Ok((i, starting_items))
 }
 
-fn parse_operation_add(i: &str) -> IResult<&str, Operation> {
+fn parse_operation_add<'a, E: ParseError<Span<'a>>>(
+    i: Span<'a>,
+) -> IResult<Span<'a>, Operation, E> {
     map(preceded(tag("+ "), nom::character::complete::u32), |x| {
         Operation::Add(x)
     })(i)
 }
 
-fn parse_operation_multiply(i: &str) -> IResult<&str, Operation> {
+fn parse_operation_multiply<'a, E: ParseError<Span<'a>>>(
+    i: Span<'a>,
+) -> IResult<Span<'a>, Operation, E> {
     map(preceded(tag("* "), nom::character::complete::u32), |x| {
         Operation::Multiply(x)
     })(i)
 }
 
-fn parse_operation_square(i: &str) -> IResult<&str, Operation> {
+fn parse_operation_square<'a, E: ParseError<Span<'a>>>(
+    i: Span<'a>,
+) -> IResult<Span<'a>, Operation, E> {
     map(tag("* old"), |_| Operation::Square)(i)
 }
 
-pub fn parse_operation(i: &str) -> IResult<&str, Operation> {
+pub fn parse_operation<'a, E: ParseError<Span<'a>>>(
+    i: Span<'a>,
+) -> IResult<Span<'a>, Operation, E> {
     let (i, _) = space0(i)?;
     let (i, _) = tag("Operation: new = old ")(i)?;
     alt((
@@ -84,11 +100,11 @@ pub fn parse_operation(i: &str) -> IResult<&str, Operation> {
     ))(i)
 }
 
-pub fn parse_divisor(i: &str) -> IResult<&str, u32> {
+pub fn parse_divisor<'a, E: ParseError<Span<'a>>>(i: Span<'a>) -> IResult<Span<'a>, u32, E> {
     preceded(tag("  Test: divisible by "), nom::character::complete::u32)(i)
 }
 
-pub fn parse_throw_to(i: &str) -> IResult<&str, ThrowTo> {
+pub fn parse_throw_to<'a, E: ParseError<Span<'a>>>(i: Span<'a>) -> IResult<Span<'a>, ThrowTo, E> {
     let (i, (_, _, if_true, _, _, _, if_false)) = tuple((
         space0,
         tag("If true: throw to monkey "),
@@ -104,7 +120,7 @@ pub fn parse_throw_to(i: &str) -> IResult<&str, ThrowTo> {
     ))
 }
 
-pub fn parse_monkey(i: &str) -> IResult<&str, Monkey> {
+pub fn parse_monkey<'a, E: ParseError<Span<'a>>>(i: Span<'a>) -> IResult<Span<'a>, Monkey, E> {
     let (i, (id, _, items, _, operation, _, divisor, _, throw_to, _)) = tuple((
         parse_monkey_id,
         newline,
@@ -130,14 +146,52 @@ pub fn parse_monkey(i: &str) -> IResult<&str, Monkey> {
     ))
 }
 
-pub fn parse_monkeys(i: &str) -> IResult<&str, Vec<Monkey>> {
+pub fn parse_monkeys<'a, E: ParseError<Span<'a>>>(
+    i: Span<'a>,
+) -> IResult<Span<'a>, Vec<Monkey>, E> {
     separated_list1(newline, parse_monkey)(i)
 }
 
-pub fn load_all_monkeys(input: &str) -> Result<Vec<Monkey>> {
-    let monkeys = all_consuming(parse_monkeys)(input)
-        .map_err(|e| e.to_owned())?
-        .1;
+#[derive(thiserror::Error, Debug, miette::Diagnostic)]
+#[error("bad input")]
+struct BadInput {
+    #[source_code]
+    //src: &'static str,
+    src: String,
+
+    #[label("{kind}")]
+    bad_bit: miette::SourceSpan,
+
+    kind: BaseErrorKind<&'static str, Box<dyn std::error::Error + Send + Sync>>,
+}
+
+pub fn load_all_monkeys(input_static: &str) -> Result<Vec<Monkey>> {
+    let input = Span::new(input_static);
+    let monkeys_res: Result<_, ErrorTree<Span>> =
+        final_parser(parse_monkeys::<ErrorTree<Span>>)(input);
+    let monkeys = match monkeys_res {
+        Ok(monkeys) => monkeys,
+        Err(e) => {
+            match e {
+                GenericErrorTree::Base { location, kind } => {
+                    let offset = location.location_offset().into();
+                    let err = BadInput {
+                        src: input_static.to_owned(),
+                        bad_bit: miette::SourceSpan::new(offset, 0.into()),
+                        kind,
+                    };
+                    let mut s = String::new();
+                    GraphicalReportHandler::new()
+                        .render_report(&mut s, &err)
+                        .unwrap();
+                    println!("{s}");
+                }
+                GenericErrorTree::Stack { .. } => todo!("stack"),
+                GenericErrorTree::Alt(_) => todo!("alt"),
+            }
+            return Err(eyre!(""));
+        }
+    };
     Ok(monkeys)
 }
 
@@ -148,45 +202,66 @@ mod tests {
         parse_divisor, parse_monkey, parse_monkey_id, parse_monkeys, parse_operation,
         parse_starting_items, parse_throw_to, Item, Monkey, MonkeyId, Operation, ThrowTo,
     };
+    use nom_supreme::error::ErrorTree;
     use pretty_assertions::assert_eq;
     use rstest::*;
 
     #[test]
     fn test_parse_monkey_id() {
-        assert_eq!(parse_monkey_id("Monkey 7:"), Ok(("", MonkeyId(7))));
+        assert_eq!(
+            parse_monkey_id::<ErrorTree<Span>>("Monkey 7:".into())
+                .unwrap()
+                .1,
+            MonkeyId(7)
+        );
     }
 
     #[test]
     fn test_parse_starting_items() {
         assert_eq!(
-            parse_starting_items("  Starting items: 54"),
-            Ok(("", vec!(Item(54))))
+            parse_starting_items::<ErrorTree<Span>>("  Starting items: 54".into())
+                .unwrap()
+                .1,
+            vec!(Item(54))
         );
         assert_eq!(
-            parse_starting_items("  Starting items: 54, 19, 33"),
-            Ok(("", vec!(Item(54), Item(19), Item(33))))
+            parse_starting_items::<ErrorTree<Span>>("  Starting items: 54, 19, 33".into())
+                .unwrap()
+                .1,
+            vec!(Item(54), Item(19), Item(33))
         );
     }
 
     #[test]
     fn test_parse_operation() {
         assert_eq!(
-            parse_operation("  Operation: new = old * 19"),
-            Ok(("", Operation::Multiply(19)))
+            parse_operation::<ErrorTree<Span>>("  Operation: new = old * 19".into())
+                .unwrap()
+                .1,
+            Operation::Multiply(19)
         );
         assert_eq!(
-            parse_operation("  Operation: new = old + 6"),
-            Ok(("", Operation::Add(6)))
+            parse_operation::<ErrorTree<Span>>("  Operation: new = old + 6".into())
+                .unwrap()
+                .1,
+            Operation::Add(6)
         );
         assert_eq!(
-            parse_operation("  Operation: new = old * old"),
-            Ok(("", Operation::Square))
+            parse_operation::<ErrorTree<Span>>("  Operation: new = old * old".into())
+                .unwrap()
+                .1,
+            Operation::Square
         );
     }
 
     #[test]
     fn test_parse_divisor() {
-        assert_eq!(parse_divisor("  Test: divisible by 19"), Ok(("", 19)));
+        assert_eq!(
+            parse_divisor::<ErrorTree<Span>>("  Test: divisible by 19".into())
+                .unwrap()
+                .1,
+            19
+        );
     }
 
     #[test]
@@ -194,8 +269,8 @@ mod tests {
         let input = "    If true: throw to monkey 42
     If false: throw to monkey 98";
         assert_eq!(
-            parse_throw_to(input),
-            Ok(("", ThrowTo(MonkeyId(42), MonkeyId(98))))
+            parse_throw_to::<ErrorTree<Span>>(input.into()).unwrap().1,
+            ThrowTo(MonkeyId(42), MonkeyId(98))
         );
     }
 
@@ -209,17 +284,14 @@ mod tests {
     If false: throw to monkey 3
 ";
         assert_eq!(
-            parse_monkey(input),
-            Ok((
-                "",
-                Monkey {
-                    id: MonkeyId(42),
-                    items: VecDeque::from([Item(65), Item(78)]),
-                    operation: Operation::Multiply(3),
-                    divisor: 5,
-                    throw_to: ThrowTo(MonkeyId(2), MonkeyId(3)),
-                }
-            ))
+            parse_monkey::<ErrorTree<Span>>(input.into()).unwrap().1,
+            Monkey {
+                id: MonkeyId(42),
+                items: VecDeque::from([Item(65), Item(78)]),
+                operation: Operation::Multiply(3),
+                divisor: 5,
+                throw_to: ThrowTo(MonkeyId(2), MonkeyId(3)),
+            }
         );
     }
 
@@ -258,40 +330,43 @@ Monkey 3:
     #[rstest]
     fn test_parse_monkeys(input: &str) {
         assert_eq!(
-            parse_monkeys(input),
-            Ok((
-                "",
-                vec![
-                    Monkey {
-                        id: MonkeyId(0),
-                        items: VecDeque::from([Item(79), Item(98)]),
-                        operation: Operation::Multiply(19),
-                        divisor: 23,
-                        throw_to: ThrowTo(MonkeyId(2), MonkeyId(3)),
-                    },
-                    Monkey {
-                        id: MonkeyId(1),
-                        items: VecDeque::from([Item(54), Item(65), Item(75), Item(74)]),
-                        operation: Operation::Add(6),
-                        divisor: 19,
-                        throw_to: ThrowTo(MonkeyId(2), MonkeyId(0)),
-                    },
-                    Monkey {
-                        id: MonkeyId(2),
-                        items: VecDeque::from([Item(79), Item(60), Item(97)]),
-                        operation: Operation::Square,
-                        divisor: 13,
-                        throw_to: ThrowTo(MonkeyId(1), MonkeyId(3)),
-                    },
-                    Monkey {
-                        id: MonkeyId(3),
-                        items: VecDeque::from([Item(74)]),
-                        operation: Operation::Add(3),
-                        divisor: 17,
-                        throw_to: ThrowTo(MonkeyId(0), MonkeyId(1)),
-                    },
-                ]
-            ))
+            parse_monkeys::<ErrorTree<Span>>(input.into()).unwrap().1,
+            vec![
+                Monkey {
+                    id: MonkeyId(0),
+                    items: VecDeque::from([Item(79), Item(98)]),
+                    operation: Operation::Multiply(19),
+                    divisor: 23,
+                    throw_to: ThrowTo(MonkeyId(2), MonkeyId(3)),
+                },
+                Monkey {
+                    id: MonkeyId(1),
+                    items: VecDeque::from([Item(54), Item(65), Item(75), Item(74)]),
+                    operation: Operation::Add(6),
+                    divisor: 19,
+                    throw_to: ThrowTo(MonkeyId(2), MonkeyId(0)),
+                },
+                Monkey {
+                    id: MonkeyId(2),
+                    items: VecDeque::from([Item(79), Item(60), Item(97)]),
+                    operation: Operation::Square,
+                    divisor: 13,
+                    throw_to: ThrowTo(MonkeyId(1), MonkeyId(3)),
+                },
+                Monkey {
+                    id: MonkeyId(3),
+                    items: VecDeque::from([Item(74)]),
+                    operation: Operation::Add(3),
+                    divisor: 17,
+                    throw_to: ThrowTo(MonkeyId(0), MonkeyId(1)),
+                },
+            ]
         )
+    }
+
+    #[rstest]
+    fn test_load_all_monkeys(input: &str) {
+        let monkeys = load_all_monkeys(input).unwrap();
+        assert_eq!(monkeys.len(), 4);
     }
 }

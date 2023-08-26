@@ -10,6 +10,10 @@ common = { path = "../../lib/common" }
 color-eyre = { workspace = true }
 rstest = { workspace = true }
 nom = { workspace = true }
+nom-supreme = "0.8"
+nom_locate = "4"
+miette = { version = "5", features = ["fancy"] }
+thiserror = "1.0.47"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
