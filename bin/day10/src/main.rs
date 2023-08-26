@@ -3,11 +3,9 @@ use common::select_and_solve;
 use common::stack::Stack;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::digit1;
-use nom::combinator::{all_consuming, map, map_res, opt, recognize};
+use nom::combinator::{all_consuming, map, value};
 use nom::sequence::preceded;
-use nom::{Finish, IResult};
-use std::str::FromStr;
+use nom::IResult;
 use tracing::debug;
 
 fn main() -> Result<()> {
@@ -36,11 +34,12 @@ enum Instruction {
 
 // https://stackoverflow.com/a/74809016/
 fn parse_i32(input: &str) -> IResult<&str, i32> {
-    let (i, number) = map_res(recognize(preceded(opt(tag("-")), digit1)), |s| {
-        i32::from_str(s)
-    })(input)?;
-
-    Ok((i, number))
+    // let (i, number) = map_res(recognize(preceded(opt(tag("-")), digit1)), |s| {
+    //     i32::from_str(s)
+    // })(input)?;
+    //
+    // Ok((i, number))
+    nom::character::complete::i32(input)
 }
 
 fn parse_addx(i: &str) -> IResult<&str, Instruction> {
@@ -48,7 +47,15 @@ fn parse_addx(i: &str) -> IResult<&str, Instruction> {
 }
 
 fn parse_noop(i: &str) -> IResult<&str, Instruction> {
-    map(tag("noop"), |_| Instruction::Noop)(i)
+    //map(tag("noop"), |_| Instruction::Noop)(i)
+    value(Instruction::Noop, tag("noop"))(i)
+}
+
+// or we can write the parse function as an associated function:
+impl Instruction {
+    fn parse(input: &str) -> IResult<&str, Self> {
+        alt((parse_addx, parse_noop))(input)
+    }
 }
 
 fn parse_instruction(i: &str) -> IResult<&str, Instruction> {
@@ -56,11 +63,39 @@ fn parse_instruction(i: &str) -> IResult<&str, Instruction> {
 }
 
 fn parse_instructions(input: &[String]) -> Result<Vec<Instruction>> {
-    let instructions: Vec<Instruction> = input
+    // Lifetime issues if we try to avoid the .unwrap() here, due to
+    // the lifetime of 'l' escaping the closure.
+    // let instructions: Vec<Instruction> = input
+    //     .iter()
+    //     .map(|l| all_consuming(Instruction::parse)(l).finish().unwrap().1)
+    //     .collect();
+    // Ok(instructions)
+
+    // E.g. this does not compile:
+    // let instructions: Result<Vec<Instruction>> = input
+    //     .iter()
+    //     .cloned()
+    //     .map(|l| {
+    //         let (_, instruction) = all_consuming(Instruction::parse)(&l)?;
+    //         Ok(instruction)
+    //     })
+    //     .collect();
+    //
+    // instructions
+
+    // The issue is that the error type of the parser contains the &str,
+    // but if we break this reference by mapping the error to an owned string, it will compile:
+    // https://stackoverflow.com/a/73506323/
+    let instructions: Result<Vec<Instruction>> = input
         .iter()
-        .map(|l| all_consuming(parse_instruction)(l).finish().unwrap().1)
+        .map(|l| {
+            let (_, instruction) =
+                all_consuming(Instruction::parse)(l).map_err(|e| e.to_owned())?;
+            Ok(instruction)
+        })
         .collect();
-    Ok(instructions)
+
+    instructions
 }
 
 struct Registers {
@@ -182,10 +217,12 @@ fn part1(input: Vec<String>) -> Result<String> {
     println!("during cycle 180: x {}", trace[180 - 1 - 1]);
     println!("during cycle 220: x {}", trace[220 - 1 - 1]);
 
-    let signal_strength = |x: &u32| -> i32 { trace[*x as usize - 1 - 1] * *x as i32 };
+    let signal_strength = |x: u32| -> i32 { trace[x as usize - 1 - 1] * x as i32 };
 
-    let cycles: [u32; 6] = [20, 60, 100, 140, 180, 220];
-    let sum: i32 = cycles.iter().map(signal_strength).sum();
+    let sum: i32 = [20u32, 60, 100, 140, 180, 220]
+        .into_iter()
+        .map(signal_strength)
+        .sum();
 
     Ok(sum.to_string())
 }
@@ -196,7 +233,7 @@ fn part2(input: Vec<String>) -> Result<String> {
 
     let trace = execute(&mut cpu, &memory);
 
-    for (i, v) in trace.iter().enumerate() {
+    for (i, _v) in trace.iter().enumerate() {
         let hor_pos = (i % 40) as i32;
 
         if hor_pos == 0 {
