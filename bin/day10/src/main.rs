@@ -58,6 +58,7 @@ impl Instruction {
     }
 }
 
+#[allow(dead_code)]
 fn parse_instruction(i: &str) -> IResult<&str, Instruction> {
     alt((parse_addx, parse_noop))(i)
 }

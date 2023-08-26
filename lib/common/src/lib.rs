@@ -15,6 +15,14 @@ macro_rules! vec_of_strings {
     });
 }
 
+pub fn load_file(filename: &str) -> Result<String> {
+    let mut file = std::fs::File::open(filename).wrap_err(format!("opening {filename}"))?;
+    let mut content = String::new();
+    file.read_to_string(&mut content)
+        .wrap_err(format!("reading {filename}"))?;
+    Ok(content)
+}
+
 pub fn load_input(filename: &str) -> Result<Vec<String>> {
     let mut file = std::fs::File::open(filename).wrap_err(format!("opening {}", filename))?;
     let mut content = String::new();
@@ -47,6 +55,32 @@ where
     let solution = match args[1].as_str() {
         "1" => solve(input1, part1),
         "2" => solve(input2, part2),
+        _ => Err(eyre!("Invalid part number {}", args[1])),
+    };
+
+    match solution {
+        Ok(result) => {
+            println!("{}", result);
+            Ok(result)
+        }
+        Err(err) => Err(err),
+    }
+}
+
+pub fn select<F1, F2>(input1: &str, part1: F1, input2: &str, part2: F2) -> Result<String>
+where
+    F1: Fn(&str) -> Result<String>,
+    F2: Fn(&str) -> Result<String>,
+{
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 2 {
+        return Err(eyre!("Specify part number 1 or 2"));
+    }
+
+    let solution = match args[1].as_str() {
+        "1" => part1(input1),
+        "2" => part2(input2),
         _ => Err(eyre!("Invalid part number {}", args[1])),
     };
 
