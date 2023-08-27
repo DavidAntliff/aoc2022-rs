@@ -17,27 +17,27 @@ use std::collections::VecDeque;
 pub type Span<'a> = LocatedSpan<&'a str>;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Item(pub u32);
+pub struct Item(pub u64);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MonkeyId(pub usize);
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Operation {
-    Add(u32),
-    Multiply(u32),
+    Add(u64),
+    Multiply(u64),
     Square,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThrowTo(pub MonkeyId, pub MonkeyId);
+pub struct ThrowTo(pub MonkeyId, pub MonkeyId); // if true, if false
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Monkey {
     pub id: MonkeyId,
     pub items: VecDeque<Item>,
     pub operation: Operation,
-    pub divisor: u32,
+    pub divisor: u64,
     pub throw_to: ThrowTo,
 }
 
@@ -71,7 +71,7 @@ impl Item {
         Self(z)
     }
 
-    pub fn is_divisible_by(&self, divisor: u32) -> bool {
+    pub fn is_divisible_by(&self, divisor: u64) -> bool {
         let divisible = self.0 % divisor == 0;
         println!(
             "    Current worry level is {}divisible by {}.",
@@ -102,7 +102,7 @@ pub fn parse_starting_items<'a, E: ParseError<Span<'a>>>(
 ) -> IResult<Span<'a>, Vec<Item>, E> {
     let (i, _) = space0(i)?;
     let (i, _) = tag("Starting items: ")(i)?;
-    let (i, v) = separated_list1(tag(", "), nom::character::complete::u32)(i)?;
+    let (i, v) = separated_list1(tag(", "), nom::character::complete::u64)(i)?;
     let starting_items: Vec<Item> = v.into_iter().map(Item).collect();
     Ok((i, starting_items))
 }
@@ -110,7 +110,7 @@ pub fn parse_starting_items<'a, E: ParseError<Span<'a>>>(
 fn parse_operation_add<'a, E: ParseError<Span<'a>>>(
     i: Span<'a>,
 ) -> IResult<Span<'a>, Operation, E> {
-    map(preceded(tag("+ "), nom::character::complete::u32), |x| {
+    map(preceded(tag("+ "), nom::character::complete::u64), |x| {
         Operation::Add(x)
     })(i)
 }
@@ -118,7 +118,7 @@ fn parse_operation_add<'a, E: ParseError<Span<'a>>>(
 fn parse_operation_multiply<'a, E: ParseError<Span<'a>>>(
     i: Span<'a>,
 ) -> IResult<Span<'a>, Operation, E> {
-    map(preceded(tag("* "), nom::character::complete::u32), |x| {
+    map(preceded(tag("* "), nom::character::complete::u64), |x| {
         Operation::Multiply(x)
     })(i)
 }
@@ -141,8 +141,8 @@ pub fn parse_operation<'a, E: ParseError<Span<'a>>>(
     ))(i)
 }
 
-pub fn parse_divisor<'a, E: ParseError<Span<'a>>>(i: Span<'a>) -> IResult<Span<'a>, u32, E> {
-    preceded(tag("  Test: divisible by "), nom::character::complete::u32)(i)
+pub fn parse_divisor<'a, E: ParseError<Span<'a>>>(i: Span<'a>) -> IResult<Span<'a>, u64, E> {
+    preceded(tag("  Test: divisible by "), nom::character::complete::u64)(i)
 }
 
 pub fn parse_throw_to<'a, E: ParseError<Span<'a>>>(i: Span<'a>) -> IResult<Span<'a>, ThrowTo, E> {
