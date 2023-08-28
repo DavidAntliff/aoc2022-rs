@@ -202,6 +202,6 @@ Monkey 3:
 
     #[rstest]
     fn test_part2(input: &str) {
-        assert_eq!(part2(input).unwrap(), "2");
+        assert_eq!(part2(input).unwrap(), "2713310158");
     }
 }
